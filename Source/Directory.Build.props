@@ -1,0 +1,24 @@
+<Project>
+	<PropertyGroup>
+		<RepositoryUrl>https://github.com/WebPx/WebPx.Countries</RepositoryUrl>
+		<PackageProjectUrl>https://www.nuget.org/packages/WebPx.Countries/</PackageProjectUrl>
+		<Product>WebPx Common Framework</Product>
+		<PackageTags>WebPx;Catalogs;Countries</PackageTags>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<IsPackable>true</IsPackable>
+		<NoWarn>NU1605</NoWarn>
+		<RootNamespace>WebPx</RootNamespace>
+		<LangVersion>Preview</LangVersion>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<NeutralLanguage>en</NeutralLanguage>
+		<Copyright>(c) WebPx Technologies</Copyright>
+		<Company>WebPx Technologies</Company>
+		<SignAssembly>True</SignAssembly>
+		<Authors>WebPx</Authors>
+		<AssemblyOriginatorKeyFile>$(SolutionDir)WebPx.snk</AssemblyOriginatorKeyFile>
+		<Version>0.5.0.0</Version>
+	</PropertyGroup>
+</Project>
