@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using WebPx.Catalogs.Resources;
 
@@ -16,6 +17,7 @@ namespace WebPx.Catalogs
         public CountriesService()
         {
             _countryList = new Lazy<List<Country>>(CreateList);
+            _regionList = new Lazy<List<Region>>(CreateRegions);
         }
 
         /// <summary>
@@ -24,15 +26,23 @@ namespace WebPx.Catalogs
         private readonly Lazy<List<Country>> _countryList;
 
         /// <summary>
+        /// Static field that stores a lazy list of all regions
+        /// </summary>
+        private readonly Lazy<List<Region>> _regionList;
+
+        /// <summary>
         /// Creates a static list of all countries
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The complete list of countries</returns>
         private List<Country> CreateList() => [..GetCountries()];
 
         /// <summary>
-        /// Gets an enumerator of all countries in alphabetical order by their english names
+        /// Creates a static list of all regions
         /// </summary>
-        /// <returns>The new instance of an enumerator</returns>
+        /// <returns>The complete list of regions</returns>
+        private List<Region> CreateRegions() => [..GetAllRegions()];
+
+        /// <inheritdoc />
         public IEnumerable<Country> GetCountries()
         {
             yield return new Country("{08909F75-8D5D-4EB8-B4CF-C7FDB3882943}", 4, Countries.AF, "AF", "AFG");
@@ -286,16 +296,145 @@ namespace WebPx.Catalogs
             yield return new Country("{b55002b4-aa9a-4a53-ba4e-264165a76052}", 716, Countries.ZW, "ZW", "ZWE");
         }
 
-        /// <summary>
-        /// Gets an instance of a unique list of all countries in the world
-        /// </summary>
-        /// <returns>The instance of the list of countries</returns>
+        /// <inheritdoc />
         public List<Country> GetList() => _countryList.Value;
 
+        /// <inheritdoc />
+        public List<Country> GetListByRegion(RegionCode code)
+        {
+            var regions = new List<Region> { GetRegion(code) };
+            regions.AddRange(GetRegions(code, true));
+            var regionCountries = new List<Country>();
+            foreach (var region in regions)
+                if (region.Countries is { Length: > 0 })
+                    regionCountries.AddRange(region.Countries);
+            return regionCountries.OrderBy(x=>x.Name).ToList();
+        }
+
+        /// <inheritdoc />
+        public List<Region> GetRegionList() => _regionList.Value;
+
+        /// <inheritdoc />
         public Country? GetCountry(int code) => GetList().FirstOrDefault(x => x.Code == code);
 
+        /// <inheritdoc />
         public Country? GetCountryByCodeA2(string alphaCode2) => GetList().FirstOrDefault(x => x.CodeA2 == alphaCode2);
 
+        /// <inheritdoc />
         public Country? GetCountryByCodeA3(string alphaCode3) => GetList().FirstOrDefault(x => x.CodeA3 == alphaCode3);
+
+        /// <inheritdoc />
+        public Region GetRegion(RegionCode regionCode) => GetRegionList().First(x => x.Code == (int)regionCode);
+
+        /// <inheritdoc />
+        public Region? GetRegionByCountry(int countryCode) => GetRegionList().FirstOrDefault(region => region.Countries?.Any(x => x.Code == countryCode) ?? false);
+
+        /// <inheritdoc />
+        public IEnumerable<Region> GetRegions(RegionCode regionCode, bool allDescendants = false)
+        {
+            foreach (var region in GetRegionList().Where(region => region.Parent?.Code == (int)regionCode))
+            {
+                yield return region;
+                if (!allDescendants) 
+                    continue;
+                foreach (var descendant in GetRegions((RegionCode)region.Code, true))
+                    yield return descendant;
+            }
+        }
+
+        /// <summary>
+        /// Gets an enumerator with all the regions in the world
+        /// </summary>
+        /// <returns>Returns an enumerator for all the regions</returns>
+        private IEnumerable<Region> GetAllRegions()
+        {
+            var maps = GetRegionMaps().ToArray();
+            List<Region> list = maps.Select(regionMap => new Region() { Code = regionMap.Code, Name = regionMap.NameFunc() }).ToList();
+            foreach (var region in list)
+            {
+                var map = maps.FirstOrDefault(x => x.Code == region.Code);
+                if (map == null) 
+                    continue;
+                var parentCode = map.ParentCode;
+                if (parentCode.HasValue)
+                {
+                    var parent = list.FirstOrDefault(x => x.Code == parentCode);
+                    if (parent != null)
+                        region.Parent = parent;
+                }
+
+                if (map.Countries is { Length: > 0 })
+                    region.Countries = map.Countries.Select(GetCountry).OfType<Country>().ToArray();
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Gets the source mapping for creating the region instances
+        /// </summary>
+        /// <returns>An enumerator with all the mappings</returns>
+        private IEnumerable<RegionMap> GetRegionMaps()
+        {
+            yield return new RegionMap() { NameFunc = () => Regions.World, Code = (int)RegionCode.World };
+            yield return new RegionMap() { NameFunc = () => Regions.Africa, Code = (int)RegionCode.Africa, ParentCode = (int)RegionCode.World };
+            yield return new RegionMap() { NameFunc = () => Regions.NorthernAfrica, Code = (int)RegionCode.NorthernAfrica, ParentCode = (int)RegionCode.Africa, Countries = [012, 434, 504, 728, 732, 788, 818] };
+            yield return new RegionMap() { NameFunc = () => Regions.SubSaharanAfrica, Code = (int)RegionCode.SubSaharanAfrica, ParentCode = (int)RegionCode.Africa };
+            yield return new RegionMap() { NameFunc = () => Regions.WesternAfrica, Code = (int)RegionCode.WesternAfrica, ParentCode = (int)RegionCode.SubSaharanAfrica, Countries = [132, 204, 270, 288, 324, 384, 430, 466, 478, 562, 566, 624, 654, 686, 694, 768, 854] };
+            yield return new RegionMap() { NameFunc = () => Regions.EasternAfrica, Code = (int)RegionCode.EasternAfrica, ParentCode = (int)RegionCode.SubSaharanAfrica, Countries = [086, 108, 174, 175, 231, 232, 260, 262, 404, 450, 454, 480, 508, 638, 646, 690, 706, 716, 728, 800, 834, 894] };
+            yield return new RegionMap() { NameFunc = () => Regions.MiddleAfrica, Code = (int)RegionCode.MiddleAfrica, ParentCode = (int)RegionCode.SubSaharanAfrica, Countries = [024, 120, 140, 148, 178, 180, 226, 266, 678] };
+            yield return new RegionMap() { NameFunc = () => Regions.SouthernAfrica, Code = (int)RegionCode.SouthernAfrica, ParentCode = (int)RegionCode.SubSaharanAfrica, Countries = [072, 426, 516, 710, 748] };
+            yield return new RegionMap() { NameFunc = () => Regions.Antarctica, Code = (int)RegionCode.Antarctica, ParentCode = (int)RegionCode.World, Countries = [10] };
+            yield return new RegionMap() { NameFunc = () => Regions.Americas, Code = (int)RegionCode.Americas, ParentCode = (int)RegionCode.World };
+            yield return new RegionMap() { NameFunc = () => Regions.NorthAmerica, Code = (int)RegionCode.NorthAmerica, ParentCode = (int)RegionCode.Americas };
+            yield return new RegionMap() { NameFunc = () => Regions.NorthernAmerica, Code = (int)RegionCode.NorthernAmerica, ParentCode = (int)RegionCode.NorthAmerica, Countries = [060, 124, 304, 666, 840] };
+            yield return new RegionMap() { NameFunc = () => Regions.LatinAmerica, Code = (int)RegionCode.LatinAmerica, ParentCode = (int)RegionCode.Americas };
+            yield return new RegionMap() { NameFunc = () => Regions.SouthAmerica, Code = (int)RegionCode.SouthAmerica, ParentCode = (int)RegionCode.LatinAmerica, Countries = [032, 068, 074, 076, 152, 170, 218, 238, 239, 254, 328, 600, 604, 740, 858, 862] };
+            yield return new RegionMap() { NameFunc = () => Regions.CentralAmerica, Code = (int)RegionCode.CentralAmerica, ParentCode = (int)RegionCode.LatinAmerica, Countries = [084, 188, 222, 320, 340, 484, 558, 591] };
+            yield return new RegionMap() { NameFunc = () => Regions.Caribbean, Code = (int)RegionCode.Caribbean, ParentCode = (int)RegionCode.LatinAmerica, Countries = [028, 044, 052, 092, 136, 192, 212, 214, 308, 312, 332, 388, 474, 500, 531, 533, 534, 535, 630, 652, 659, 660, 662, 663, 670, 780, 796, 850] };
+            yield return new RegionMap() { NameFunc = () => Regions.Asia, Code = (int)RegionCode.Asia, ParentCode = (int)RegionCode.World };
+            yield return new RegionMap() { NameFunc = () => Regions.EasternAsia, Code = (int)RegionCode.EasternAsia, ParentCode = (int)RegionCode.Asia, Countries = [156, 344, 392, 408, 410, 446, 496] };
+            yield return new RegionMap() { NameFunc = () => Regions.SouthernAsia, Code = (int)RegionCode.SouthernAsia, ParentCode = (int)RegionCode.Asia, Countries = [004, 050, 064, 144, 356, 364, 462, 524, 586] };
+            yield return new RegionMap() { NameFunc = () => Regions.SouthEasternAsia, Code = (int)RegionCode.SouthEasternAsia, ParentCode = (int)RegionCode.Asia, Countries = [096, 104, 116, 360, 418, 458, 608, 626, 702, 704, 764] };
+            yield return new RegionMap() { NameFunc = () => Regions.CentralAsia, Code = (int)RegionCode.CentralAsia, ParentCode = (int)RegionCode.Asia, Countries = [398, 417, 762, 795, 860] };
+            yield return new RegionMap() { NameFunc = () => Regions.WesternAsia, Code = (int)RegionCode.WesternAsia, ParentCode = (int)RegionCode.Asia, Countries = [031, 051, 048, 196, 268, 275, 368, 376, 400, 414, 422, 512, 634, 682, 760, 792, 784, 887] };
+            yield return new RegionMap() { NameFunc = () => Regions.Europe, Code = (int)RegionCode.Europe, ParentCode = (int)RegionCode.World };
+            yield return new RegionMap() { NameFunc = () => Regions.SouthernEurope, Code = (int)RegionCode.SouthernEurope, ParentCode = (int)RegionCode.Europe, Countries = [008, 020, 070, 191, 292, 300, 336, 380, 470, 499, 620, 674, 688, 705, 724, 807] };
+            yield return new RegionMap() { NameFunc = () => Regions.EasternEurope, Code = (int)RegionCode.EasternEurope, ParentCode = (int)RegionCode.Europe, Countries = [100, 112, 203, 348, 498, 616, 642, 643, 703, 804] };
+            yield return new RegionMap() { NameFunc = () => Regions.NorthernEurope, Code = (int)RegionCode.NorthernEurope, ParentCode = (int)RegionCode.Europe, Countries = [208, 233, 234, 246, 248, 352, 372, 428, 440, 578, 744, 752, 826, 833, 830] };
+            yield return new RegionMap() { NameFunc = () => Regions.ChannelIslands, Code = (int)RegionCode.ChannelIslands, ParentCode = (int)RegionCode.NorthernEurope, Countries = [831, 832, 680] };
+            yield return new RegionMap() { NameFunc = () => Regions.WesternEurope, Code = (int)RegionCode.WesternEurope, ParentCode = (int)RegionCode.Europe, Countries = [040, 056, 250, 276, 438, 442, 492, 528, 756] };
+            yield return new RegionMap() { NameFunc = () => Regions.Oceania, Code = (int)RegionCode.Oceania, ParentCode = (int)RegionCode.World };
+            yield return new RegionMap() { NameFunc = () => Regions.AustraliaNewZealand, Code = (int)RegionCode.AustraliaNewZealand, ParentCode = (int)RegionCode.Oceania, Countries = [036, 162, 166, 334, 554, 574] };
+            yield return new RegionMap() { NameFunc = () => Regions.Melanesia, Code = (int)RegionCode.Melanesia, ParentCode = (int)RegionCode.Oceania, Countries = [090, 242, 540, 548, 598] };
+            yield return new RegionMap() { NameFunc = () => Regions.Micronesia, Code = (int)RegionCode.Micronesia, ParentCode = (int)RegionCode.Oceania, Countries = [296, 316, 520, 580, 581, 583, 584, 585] };
+            yield return new RegionMap() { NameFunc = () => Regions.Polynesia, Code = (int)RegionCode.Polynesia, ParentCode = (int)RegionCode.Oceania, Countries = [016, 184, 258, 570, 612, 772, 776, 798, 876, 882] };
+        }
+
+        /// <summary>
+        /// Class that defines the mapping between the region code, the region name, the parent region code and the countries in the region
+        /// </summary>
+        [SuppressMessage("ReSharper", "PropertyCanBeMadeInitOnly.Local")]
+        private class RegionMap()
+        {
+            /// <summary>
+            /// Gets or sets a function that returns the name of the region
+            /// </summary>
+            public Func<string> NameFunc { get; set; } = null!;
+
+            /// <summary>
+            /// Gets or sets the region code
+            /// </summary>
+            public int Code { get; set; }
+
+            /// <summary>
+            /// Gets or sets the parent region code
+            /// </summary>
+            public int? ParentCode { get; set; }
+
+            /// <summary>
+            /// Gets or sets the countries' codes that are contained in the region
+            /// </summary>
+            public int[]? Countries { get; set; }
+        }
     }
 }

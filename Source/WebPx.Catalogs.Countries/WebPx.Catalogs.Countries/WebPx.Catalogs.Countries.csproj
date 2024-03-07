@@ -6,6 +6,8 @@
 		<Description>A source for list of all countries in the world, for RAD development that can be included in any solution that uses basic information about countries</Description>
 		<Title>WebPx Countries Catalog</Title>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<ProduceReferenceAssembly>True</ProduceReferenceAssembly>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -31,12 +33,21 @@
 			<AutoGen>True</AutoGen>
 			<DependentUpon>Countries.resx</DependentUpon>
 		</Compile>
+		<Compile Update="Catalogs\Resources\Regions.Designer.cs">
+		  <DesignTime>True</DesignTime>
+		  <AutoGen>True</AutoGen>
+		  <DependentUpon>Regions.resx</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
 		<EmbeddedResource Update="Catalogs\Resources\Countries.resx">
 			<Generator>PublicResXFileCodeGenerator</Generator>
 			<LastGenOutput>Countries.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Catalogs\Resources\Regions.resx">
+		  <Generator>ResXFileCodeGenerator</Generator>
+		  <LastGenOutput>Regions.Designer.cs</LastGenOutput>
 		</EmbeddedResource>
 	</ItemGroup>
 

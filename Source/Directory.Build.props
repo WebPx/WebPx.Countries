@@ -19,6 +19,6 @@
 		<SignAssembly>True</SignAssembly>
 		<Authors>WebPx</Authors>
 		<AssemblyOriginatorKeyFile>$(SolutionDir)WebPx.snk</AssemblyOriginatorKeyFile>
-		<Version>0.5.0.0</Version>
+		<Version>0.5.1.0</Version>
 	</PropertyGroup>
 </Project>

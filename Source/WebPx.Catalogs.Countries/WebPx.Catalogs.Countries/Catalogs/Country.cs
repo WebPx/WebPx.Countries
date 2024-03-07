@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Text;
 
 namespace WebPx.Catalogs
@@ -8,6 +9,7 @@ namespace WebPx.Catalogs
     /// <summary>
     /// Class that defines the basic information about a country with the ISO 3166 Numeric, Alpha-2 and Alpha-3 Codes
     /// </summary>
+    [DebuggerDisplay("Code = {Code}, Name = '{Name}'")]
     public class Country() 
     {
         /// <summary>
@@ -28,7 +30,7 @@ namespace WebPx.Catalogs
         }
 
         /// <summary>
-        /// Gets a global unique id to identified the country, used specially for database sync
+        /// Gets a global unique id to identify the country, used specially for database sync
         /// </summary>
         [Key]
         public Guid Id { get; init; }
